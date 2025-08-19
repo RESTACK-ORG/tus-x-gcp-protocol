@@ -1,0 +1,65 @@
+import express from 'express'
+import cors from 'cors'
+import { Server } from '@tus/server'
+import { GCSStore } from '@tus/gcs-store'
+import { Storage } from '@google-cloud/storage'
+
+const app = express()
+const port = process.env.PORT || 3001
+
+const bucketName = process.env.GCS_BUCKET_NAME || 'tus-upload-test'
+const projectId = process.env.GCS_PROJECT_ID || 'iqol-crm'
+
+const storage = new Storage({
+  projectId: projectId,
+  keyFilename: './gcs-key.json'
+})
+
+const bucket = storage.bucket(bucketName)
+
+app.use(cors({
+  origin: true,
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'HEAD', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'tus-resumable', 'upload-length', 'upload-offset', 'upload-metadata']
+}))
+
+const tusServer = new Server({
+  path: '/files',
+  datastore: new GCSStore({
+    bucket: bucket
+  }),
+  onUploadCreate: async (req, upload) => {
+    console.log('Upload created:', upload.id)
+    return { 
+      metadata: upload.metadata 
+    }
+  },
+  onUploadFinish: async (req, upload) => {
+    console.log('Upload finished:', upload.id, 'Size:', upload.size)
+    return {}
+  }
+})
+
+app.use('/files', (req, res) => {
+  return tusServer.handle(req, res)
+})
+
+app.get('/', (req, res) => {
+  res.json({ 
+    message: 'TUS Upload Server',
+    endpoints: {
+      upload: '/files',
+      health: '/health'
+    }
+  })
+})
+
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() })
+})
+
+app.listen(port, () => {
+  console.log(`TUS upload server running on http://localhost:${port}`)
+  console.log(`Upload endpoint: http://localhost:${port}/files`)
+})
