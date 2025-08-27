@@ -11,14 +11,13 @@ const bucketName = process.env.GCS_BUCKET_NAME || "tus-upload-test";
 const projectId = process.env.GCS_PROJECT_ID || "iqol-crm";
 
 const storage = new Storage({
-  projectId: projectId,
+  projectId,
   keyFilename: "./gcs-key.json",
 });
 
 const bucket = storage.bucket(bucketName);
 
-app.options("/files/*", cors());
-
+// Global CORS
 app.use(
   cors({
     origin: true,
@@ -44,36 +43,33 @@ app.use(
   })
 );
 
+// Express 5-safe preflight (regex, not "*")
+app.options(/.*/, cors());
+
+// tus server
 const tusServer = new Server({
   path: "/files",
-  datastore: new GCSStore({
-    bucket: bucket,
-  }),
+  datastore: new GCSStore({ bucket }),
   onUploadCreate: async (req, upload) => {
     console.log("Upload created:", upload.id);
-    return {
-      metadata: upload.metadata,
-    };
+    return { metadata: upload.metadata };
   },
   onUploadFinish: async (req, upload) => {
     console.log("Upload finished:", upload.id, "Size:", upload.size);
-    return {
-      metadata: upload.metadata,
-    };
+    return { metadata: upload.metadata };
   },
 });
 
+// Short-circuit OPTIONS before tus
 app.use("/files", (req, res) => {
+  if (req.method === "OPTIONS") return res.sendStatus(204);
   return tusServer.handle(req, res);
 });
 
 app.get("/", (req, res) => {
   res.json({
     message: "TUS Upload Server",
-    endpoints: {
-      upload: "/files",
-      health: "/health",
-    },
+    endpoints: { upload: "/files", health: "/health" },
   });
 });
 
