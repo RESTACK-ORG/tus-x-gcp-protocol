@@ -24,9 +24,19 @@
             }
 
             upload = new tus.Upload(file, {
-                endpoint: 'http://localhost:3001/files',
-                chunkSize: 1024 * 1024, // 1MB chunks
+                endpoint: 'https://tus-x-gcp-protocol-test.onrender.com/files',
+                mode: 'cors',
+                approach: 'tus',
+                cache: 'no-cache',
+                credentials: 'same-origin',
+                chunkSize: 2 * 1024 * 1024, // 2MB chunks
                 retryDelays: [0, 3000, 5000, 10000, 20000],
+                headers: {
+                  'Content-Type': 'application/json',
+                  Accept: 'upload-metadata,application/offset+octet-stream',
+                },
+                redirect: 'follow',
+                referrerPolicy: 'no-referrer',
                 storeFingerprintForResuming: true,
                 removeFingerprintOnSuccess: true,
                 metadata: {
