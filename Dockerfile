@@ -13,8 +13,8 @@ RUN npm install
 # Copy the rest of the application code to the container
 COPY . .
 
-# Expose port 3000
-EXPOSE 3000
+# Expose port 8080 (App Engine standard)
+EXPOSE 8080
 
 # Start the application
 CMD ["npm", "start"]

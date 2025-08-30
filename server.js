@@ -5,14 +5,13 @@ import { GCSStore } from "@tus/gcs-store";
 import { Storage } from "@google-cloud/storage";
 
 const app = express();
-const port = process.env.PORT || 3001;
+const port = process.env.PORT || 8080;
 
-const bucketName = process.env.GCS_BUCKET_NAME || "tus-upload-test";
-const projectId = process.env.GCS_PROJECT_ID || "iqol-crm";
+const bucketName = process.env.GCS_BUCKET_NAME;
+const projectId = process.env.GCS_PROJECT_ID;
 
 const storage = new Storage({
   projectId,
-  keyFilename: "./gcs-key.json",
 });
 
 const bucket = storage.bucket(bucketName);
