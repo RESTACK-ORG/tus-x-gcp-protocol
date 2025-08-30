@@ -1,3 +1,4 @@
+import "dotenv/config";
 import express from "express";
 import cors from "cors";
 import { Server } from "@tus/server";
@@ -8,6 +9,7 @@ const app = express();
 const port = process.env.PORT || 8080;
 
 const bucketName = process.env.GCS_BUCKET_NAME;
+const agentInventoryBucketName = process.env.GCS_AGENT_INVENTORY_BUCKET_NAME;
 const projectId = process.env.GCS_PROJECT_ID;
 
 const storage = new Storage({
@@ -16,6 +18,7 @@ const storage = new Storage({
 });
 
 const bucket = storage.bucket(bucketName);
+const agentInventoryBucket = storage.bucket(agentInventoryBucketName);
 
 // Global CORS
 app.use(
@@ -60,16 +63,64 @@ const tusServer = new Server({
   },
 });
 
+// Agent Inventory Upload TUS server
+const agentInventoryTusServer = new Server({
+  path: "/agentInventoryUpload",
+  datastore: new GCSStore({ 
+    bucket: agentInventoryBucket,
+    directory: (req, upload) => {
+      const metadata = upload.metadata || {};
+      const propertyId = metadata.propertyId;
+      if (!propertyId) {
+        throw new Error("propertyId is required in metadata");
+      }
+      return `media-files/${propertyId}`;
+    }
+  }),
+  onUploadCreate: async (req, upload) => {
+    const metadata = upload.metadata || {};
+    const propertyId = metadata.propertyId;
+    
+    if (!propertyId) {
+      throw new Error("propertyId is required in metadata");
+    }
+
+    try {
+      const [files] = await agentInventoryBucket.getFiles({ prefix: `media-files/${propertyId}/` });
+      if (files && files.length > 0) {
+        throw new Error(`Folder media-files/${propertyId} already exists with files. Upload not allowed.`);
+      }
+    } catch (error) {
+      if (error.message.includes("already exists")) {
+        throw error;
+      }
+    }
+
+    console.log("Agent inventory upload created:", upload.id, "propertyId:", propertyId);
+    return { metadata: upload.metadata };
+  },
+  onUploadFinish: async (req, upload) => {
+    console.log("Agent inventory upload finished:", upload.id, "Size:", upload.size);
+    return { metadata: upload.metadata };
+  },
+});
+
 // Short-circuit OPTIONS before tus
 app.use("/files", (req, res) => {
   if (req.method === "OPTIONS") return res.sendStatus(204);
   return tusServer.handle(req, res);
 });
 
+// Short-circuit OPTIONS before agent inventory tus
+app.use("/agentInventoryUpload", (req, res) => {
+  if (req.method === "OPTIONS") return res.sendStatus(204);
+  return agentInventoryTusServer.handle(req, res);
+});
+
 app.get("/", (req, res) => {
   res.json({
     message: "TUS Upload Server",
-    endpoints: { upload: "/files", health: "/health" },
+    endpoints: { upload: "/files", agentInventoryUpload: "/agentInventoryUpload", health: "/health" },
   });
 });
 
