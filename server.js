@@ -12,6 +12,7 @@ const projectId = process.env.GCS_PROJECT_ID;
 
 const storage = new Storage({
   projectId,
+  credentials: process.env.GCP_SA_KEY ? JSON.parse(process.env.GCP_SA_KEY) : undefined,
 });
 
 const bucket = storage.bucket(bucketName);

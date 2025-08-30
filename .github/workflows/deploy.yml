@@ -25,7 +25,7 @@ jobs:
     - name: Authenticate to Google Cloud
       uses: google-github-actions/auth@v2
       with:
-        credentials_json: ${{ secrets.GCP_SA_KEY }}
+        credentials_json: ${{ secrets.DEPLOY_GAE_SA }}
         
     - name: Setup Google Cloud SDK
       uses: google-github-actions/setup-gcloud@v2
@@ -34,3 +34,5 @@ jobs:
         
     - name: Deploy to App Engine
       run: gcloud app deploy --quiet
+      env:
+        GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
