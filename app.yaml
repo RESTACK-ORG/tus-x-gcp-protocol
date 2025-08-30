@@ -9,7 +9,6 @@ env_variables:
 automatic_scaling:
   min_instances: 0
   max_instances: 10
-  target_cpu_utilization: 0.6
 
 resources:
   cpu: 1
