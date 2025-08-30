@@ -1,5 +1,5 @@
-runtime: nodejs22
-env: flex
+runtime: nodejs20
+env: standard
 service: tus-protocol
 
 env_variables:
