@@ -1,4 +1,4 @@
-runtime: custom
+runtime: nodejs20
 env: flex
 service: tus-protocol
 
