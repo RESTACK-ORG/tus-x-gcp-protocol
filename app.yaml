@@ -4,6 +4,7 @@ service: tus-protocol
 
 env_variables:
   GCS_BUCKET_NAME: "tus-upload-test"
+  GCS_AGENT_INVENTORY_BUCKET_NAME: "iqol-crm"
   GCS_PROJECT_ID: "iqol-crm"
 
 automatic_scaling:

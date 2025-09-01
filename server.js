@@ -12,6 +12,16 @@ const bucketName = process.env.GCS_BUCKET_NAME;
 const agentInventoryBucketName = process.env.GCS_AGENT_INVENTORY_BUCKET_NAME;
 const projectId = process.env.GCS_PROJECT_ID;
 
+if (!bucketName) {
+  throw new Error("GCS_BUCKET_NAME environment variable is required");
+}
+if (!agentInventoryBucketName) {
+  throw new Error("GCS_AGENT_INVENTORY_BUCKET_NAME environment variable is required");
+}
+if (!projectId) {
+  throw new Error("GCS_PROJECT_ID environment variable is required");
+}
+
 const storage = new Storage({
   projectId,
   credentials: process.env.GCP_SA_KEY ? JSON.parse(process.env.GCP_SA_KEY) : undefined,
