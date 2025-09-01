@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>TUS Upload Test</title>
+    <script src="https://cdn.jsdelivr.net/npm/tus-js-client@latest/dist/tus.min.js"></script>
+</head>
+<body>
+    <h1>TUS Upload Test</h1>
+    <input type="file" id="fileInput">
+    <button onclick="startUpload()">Upload</button>
+    <div id="progress"></div>
+    <div id="status"></div>
+
+    <script>
+        let upload;
+
+        function startUpload() {
+            const fileInput = document.getElementById('fileInput');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                alert('Please select a file');
+                return;
+            }
+            
+            
+            upload = new tus.Upload(file, {
+                endpoint: 'http://localhost:3001/agentInventoryUpload',
+                chunkSize: 2 * 1024 * 1024, // 2MB chunks
+                retryDelays: [0, 3000, 5000, 10000, 20000],
+                storeFingerprintForResuming: true,
+                removeFingerprintOnSuccess: true,
+                metadata: {
+                    filename: file.name,
+                    filetype: file.type,
+                    propertyId: 'PA3565'
+                },
+                onError: function(error) {
+                    console.log('Failed because: ' + error);
+                    document.getElementById('status').innerHTML = 'Upload failed: ' + error;
+                },
+                onProgress: function(bytesUploaded, bytesTotal) {
+                    const percentage = (bytesUploaded / bytesTotal * 100).toFixed(2);
+                    document.getElementById('progress').innerHTML = `Progress: ${percentage}% (${bytesUploaded}/${bytesTotal} bytes)`;
+                    console.log('Progress:', bytesUploaded, '/', bytesTotal);
+                },
+                onSuccess: function() {
+                    console.log('Download %s from %s', upload.file.name, upload.url);
+                    document.getElementById('status').innerHTML = `Upload completed! URL: ${upload.url}`;
+                },
+                onAfterResponse: function(req, res) {
+                    console.log('Response:', res.getStatus(), res.getHeader('upload-offset'));
+                }
+            });
+
+            // Check if there's a resumable upload
+            upload.findPreviousUploads().then(function(previousUploads) {
+                if (previousUploads.length > 0) {
+                    console.log('Found previous upload, resuming from:', previousUploads[0].uploadUrl);
+                    upload.resumeFromPreviousUpload(previousUploads[0]);
+                }
+                upload.start();
+            });
+        }
+    </script>
+</body>
+</html>

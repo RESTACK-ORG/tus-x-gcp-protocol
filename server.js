@@ -67,15 +67,7 @@ const tusServer = new Server({
 const agentInventoryTusServer = new Server({
   path: "/agentInventoryUpload",
   datastore: new GCSStore({ 
-    bucket: agentInventoryBucket,
-    directory: (req, upload) => {
-      const metadata = upload.metadata || {};
-      const propertyId = metadata.propertyId;
-      if (!propertyId) {
-        throw new Error("propertyId is required in metadata");
-      }
-      return `media-files/${propertyId}`;
-    }
+    bucket: agentInventoryBucket
   }),
   onUploadCreate: async (req, upload) => {
     const metadata = upload.metadata || {};
@@ -85,22 +77,29 @@ const agentInventoryTusServer = new Server({
       throw new Error("propertyId is required in metadata");
     }
 
-    try {
-      const [files] = await agentInventoryBucket.getFiles({ prefix: `media-files/${propertyId}/` });
-      if (files && files.length > 0) {
-        throw new Error(`Folder media-files/${propertyId} already exists with files. Upload not allowed.`);
-      }
-    } catch (error) {
-      if (error.message.includes("already exists")) {
-        throw error;
-      }
-    }
-
     console.log("Agent inventory upload created:", upload.id, "propertyId:", propertyId);
     return { metadata: upload.metadata };
   },
   onUploadFinish: async (req, upload) => {
-    console.log("Agent inventory upload finished:", upload.id, "Size:", upload.size);
+    const metadata = upload.metadata || {};
+    const propertyId = metadata.propertyId;
+    const filename = metadata.filename || upload.id;
+    const targetPath = `media-files/${propertyId}/${filename}`;
+    
+    try {
+      // Move file from upload ID to proper folder structure
+      const sourceFile = agentInventoryBucket.file(upload.id);
+      const targetFile = agentInventoryBucket.file(targetPath);
+      
+      await sourceFile.move(targetFile);
+      
+      console.log("Agent inventory upload finished:", upload.id, "Size:", upload.size);
+      console.log("File moved to:", targetPath);
+    } catch (error) {
+      console.error("Error moving file:", error);
+      throw error;
+    }
+    
     return { metadata: upload.metadata };
   },
 });
