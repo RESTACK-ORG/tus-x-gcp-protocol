@@ -35,6 +35,8 @@ app.use(
       "upload-metadata",
       "upload-defer-length",
       "upload-concat",
+      "upload-checksum",
+      "x-requested-with",
     ],
     exposedHeaders: [
       "location",
@@ -42,6 +44,7 @@ app.use(
       "upload-length",
       "tus-resumable",
       "upload-metadata",
+      "upload-checksum",
     ],
   })
 );
